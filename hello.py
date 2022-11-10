@@ -1,11 +1,18 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, session, redirect, url_for, flash
 from flask_bootstrap import Bootstrap
 from flask_moment import Moment
 from datetime import datetime
+from flask_wtf import FlaskForm
+from wtforms import StringField, SubmitField
+from wtforms.validators import DataRequired
+from flask_wtf.csrf import CSRFProtect
+
 
 app = Flask(__name__)
-Bootstrap(app)
-Moment(app)
+Bootstrap(app) # for enabling bootstrapt templates
+Moment(app) # for date time conversion operations
+CSRFProtect(app) # for csrd protection in flast wtf froms
+app.config['SECRET_KEY'] = 'running flask'
 
 @app.route('/')
 def index():
@@ -22,6 +29,21 @@ def page_not_found(e):
 @app.errorhandler(500)
 def internal_server_error(e):
     return render_template('500.html'), 500
+
+@app.route('/form', methods=['GET', 'POST'])
+def form():
+    form = NameForm()
+    if form.validate_on_submit():
+        old_name = session.get('name')
+        if old_name is not None and old_name != form.name.data:
+            flash('Looks like you changed your name!')
+        session['name'] = form.name.data
+        return redirect(url_for('form'))
+    return render_template('form.html', form=form, name=session.get('name'))
+
+class NameForm(FlaskForm):
+    name = StringField('What is your name?', validators=[DataRequired()])
+    submit = SubmitField('Submit')
 
 if __name__ == '__main__':
     app.run(debug=True)
